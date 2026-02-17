@@ -35,9 +35,9 @@ Production-ready RAG Chat Storage Microservice with lifecycle-aware AI memory co
 ### Using Docker Compose
 
 1. Clone the repository
-2. Copy `.env.example` to `.env` and configure:
+2. Copy `Keys.env` to `.env` and configure:
 ```bash
-cp .env.example .env
+cp .Keys.env .env
 # Edit .env with your configuration
 ```
 
@@ -277,7 +277,7 @@ Proprietary - Axiom Systems
 ## Support
 
 For issues and questions:
-- Email: support@axiom-systems.com
+- Email: nebinmohammed.sa.007@gmail.com
 - Issues: Create issue in repository
 - Docs: Check /docs folder
 
