@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ragchat-postgres
+    environment:
+      POSTGRES_DB: ragchat
+      POSTGRES_USER: ragchat_user
+      POSTGRES_PASSWORD: ragchat_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ragchat-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ragchat_user -d ragchat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: ragchat-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - ragchat-network
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 5 bash -c 'cat < /dev/null > /dev/tcp/localhost/6333' || exit 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    container_name: ragchat-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ragchat-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: ragchat-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@ragchat.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    networks:
+      - ragchat-network
+    depends_on:
+      - postgres
+
+  backend:
+    build: .
+    container_name: ragchat-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ragchat
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6334
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL}
+      GEMINI_PROJECT_ID: ${GEMINI_PROJECT_ID}
+      GEMINI_LOCATION: ${GEMINI_LOCATION}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION}
+      API_KEY: ${API_KEY}                                              # ← was missing
+      RATE_LIMIT_CAPACITY: ${RATE_LIMIT_CAPACITY}
+      RATE_LIMIT_REFILL_TOKENS: ${RATE_LIMIT_REFILL_TOKENS}
+      RATE_LIMIT_REFILL_DURATION_MINUTES: ${RATE_LIMIT_REFILL_DURATION_MINUTES}
+      SESSION_TIMEOUT_MINUTES: ${SESSION_TIMEOUT_MINUTES}
+      SESSION_INACTIVITY_CHECK_MINUTES: ${SESSION_INACTIVITY_CHECK_MINUTES}
+      SUMMARY_TRIGGER_MESSAGE_COUNT: ${SUMMARY_TRIGGER_MESSAGE_COUNT}
+      SUMMARY_MAX_TOKENS: ${SUMMARY_MAX_TOKENS}
+      LOGGING_LEVEL_ROOT: ${LOGGING_LEVEL_ROOT}
+      LOGGING_LEVEL_APP: ${LOGGING_LEVEL_APP}
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
+    networks:
+      - ragchat-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    restart: on-failure:5
+volumes:
+  postgres_data:
+  qdrant_data:
+  redis_data:
+
+networks:
+  ragchat-network:
+    driver: bridge

@@ -1,0 +1,129 @@
+spring:
+  application:
+    name: rag-chat
+  
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:ragchat}
+    username: ${DB_USER:ragchat_user}
+    password: ${DB_PASSWORD:ragchat_pass}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+  
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+  
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 60000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+
+# Qdrant Configuration
+qdrant:
+  host: ${QDRANT_HOST:localhost}
+  port: ${QDRANT_PORT:6334}
+  collection-name: ${QDRANT_COLLECTION_NAME:chat_embeddings}
+
+# Gemini Configuration
+gemini:
+  api-key: ${GEMINI_API_KEY}
+  model: ${GEMINI_MODEL:gemini-2.0-flash-exp}
+  project-id: ${GEMINI_PROJECT_ID}
+  location: ${GEMINI_LOCATION:us-central1}
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+
+# RAG Chat Configuration
+ragchat:
+  api:
+    key: ${API_KEY}
+  
+  rate-limit:
+    capacity: ${RATE_LIMIT_CAPACITY:100}
+    refill-tokens: ${RATE_LIMIT_REFILL_TOKENS:100}
+    refill-duration-minutes: ${RATE_LIMIT_REFILL_DURATION_MINUTES:1}
+  
+  session:
+    timeout-minutes: ${SESSION_TIMEOUT_MINUTES:30}
+    inactivity-check-minutes: ${SESSION_INACTIVITY_CHECK_MINUTES:5}
+  
+  summary:
+    trigger-message-count: ${SUMMARY_TRIGGER_MESSAGE_COUNT:20}
+    max-tokens: ${SUMMARY_MAX_TOKENS:2000}
+
+# Logging Configuration
+logging:
+  level:
+    root: ${LOGGING_LEVEL_ROOT:INFO}
+    com.axiom.RagChat: ${LOGGING_LEVEL_APP:DEBUG}
+    org.springframework.security: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/ragchat.log
+    max-size: 10MB
+    max-history: 30
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+
+  endpoint:
+    health:
+      show-details: always
+
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+# SpringDoc OpenAPI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+
+# Server Configuration
+server:
+  port: 8080
+  compression:
+    enabled: true
+  http2:
+    enabled: true
